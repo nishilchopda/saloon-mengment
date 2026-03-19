@@ -3,7 +3,7 @@ const router = express.Router();
 const { getStaffAppointments, updateAppointmentStatus } = require('../controllers/staff');
 const { auth, authorize } = require('../middleware/auth');
 
-router.use(auth, authorize('Staff'));
+router.use(auth, authorize('staff'));
 
 router.get('/appointments', getStaffAppointments);
 router.put('/appointments/:id', updateAppointmentStatus);
