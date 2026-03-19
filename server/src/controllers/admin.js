@@ -70,3 +70,42 @@ exports.getAllOwners = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await pool.query('SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC');
+    res.json(users.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await pool.query(`
+      SELECT b.*, u.name AS customer_name, s.name AS service_name, sa.name AS salon_name, st.name AS staff_name
+      FROM bookings b
+      LEFT JOIN users u ON b.user_id = u.id
+      LEFT JOIN services s ON b.service_id = s.id
+      LEFT JOIN salons sa ON b.salon_id = sa.id
+      LEFT JOIN staff st ON b.staff_id = st.id
+      ORDER BY b.booking_date DESC
+    `);
+    res.json(bookings.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleteRes = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (deleteRes.rowCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

@@ -63,6 +63,86 @@ exports.createStaff = async (req, res) => {
   }
 };
 
+// Salon Owner Dashboard: Get Own Salon
+exports.getMySalon = async (req, res) => {
+  try {
+    const salonRes = await pool.query('SELECT * FROM salons WHERE owner_id = $1', [req.user.id]);
+    if (salonRes.rows.length === 0) return res.status(404).json({ message: 'Salon not found' });
+    res.json(salonRes.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Salon Owner Dashboard: Get Salon Services
+exports.getSalonServicesByOwner = async (req, res) => {
+  try {
+    const salonRes = await pool.query('SELECT id FROM salons WHERE owner_id = $1', [req.user.id]);
+    if (salonRes.rows.length === 0) return res.status(404).json({ message: 'Salon not found' });
+    const salonId = salonRes.rows[0].id;
+
+    const services = await pool.query('SELECT * FROM services WHERE salon_id = $1', [salonId]);
+    res.json(services.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Salon Owner Dashboard: Get Salon Staff
+exports.getSalonStaffByOwner = async (req, res) => {
+  try {
+    const salonRes = await pool.query('SELECT id FROM salons WHERE owner_id = $1', [req.user.id]);
+    if (salonRes.rows.length === 0) return res.status(404).json({ message: 'Salon not found' });
+    const salonId = salonRes.rows[0].id;
+
+    const staff = await pool.query('SELECT * FROM staff WHERE salon_id = $1', [salonId]);
+    res.json(staff.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Salon Owner Dashboard: Get Salon Bookings
+exports.getSalonBookings = async (req, res) => {
+  try {
+    const salonRes = await pool.query('SELECT id FROM salons WHERE owner_id = $1', [req.user.id]);
+    if (salonRes.rows.length === 0) return res.status(404).json({ message: 'Salon not found' });
+    const salonId = salonRes.rows[0].id;
+
+    const bookings = await pool.query(`
+      SELECT b.*, u.name as customer_name, s.name as service_name, st.name as staff_name
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN services s ON b.service_id = s.id
+      LEFT JOIN staff st ON b.staff_id = st.id
+      WHERE b.salon_id = $1
+      ORDER BY b.booking_date DESC
+    `, [salonId]);
+
+    res.json(bookings.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Salon Owner Dashboard: Update Booking Status
+exports.updateSalonBookingStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    const salonRes = await pool.query('SELECT id FROM salons WHERE owner_id = $1', [req.user.id]);
+    if (salonRes.rows.length === 0) return res.status(404).json({ message: 'Salon not found' });
+    const salonId = salonRes.rows[0].id;
+
+    const bookingRes = await pool.query('UPDATE bookings SET status = $1 WHERE id = $2 AND salon_id = $3 RETURNING *', [status, id, salonId]);
+    if (bookingRes.rowCount === 0) return res.status(404).json({ message: 'Booking not found' });
+
+    res.json(bookingRes.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 // Salon Owner Dashboard: Generate Customer Invite
 exports.createCustomerInvite = async (req, res) => {
   const { name, phone } = req.body;
